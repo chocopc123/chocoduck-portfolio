@@ -25,31 +25,40 @@ const menuItems = [
 		display: flex;
 		justify-content: center;
 		align-items: center;
-		padding-top: 20px; /* 上部との間隔を確保 */
+		padding-top: 0px; 
 	}
 
 	.menu-item {
 		position: absolute;
-		width: 100px;
-		height: 100px;
-		border-radius: 50%;
+		top: 53%;
+		left: 50%;
+		width: 110px;
+		height: 46px;
+		border-radius: 23px;
 		background-color: white;
-		border: 4px solid #FFB7C5;
+		border: 3px solid #FFC1CC; 
 		display: flex;
 		justify-content: center;
 		align-items: center;
 		font-weight: 800;
+		font-size: 1.1rem;
 		color: #E8995E;
-		box-shadow: 0 5px 15px rgba(232, 153, 94, 0.2);
-		transition: transform 0.3s;
+		box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+		transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 		user-select: none;
 		z-index: 5;
+		cursor: pointer;
+		/* 中央基準で配置するためのオフセット */
+		margin-left: -55px;
+		margin-top: -23px;
 	}
 	
 	.menu-item.active {
 		background-color: #FFB7C5;
+		border-color: #FFB7C5;
 		color: white;
-		transform: scale(1.1);
+		/* scale属性を削除。JS側のGSAPでのみ制御する */
+		box-shadow: 0 0 25px rgba(255, 183, 197, 0.7);
 	}
 </style>
 
@@ -57,7 +66,7 @@ const menuItems = [
 
 <script is:inline>
 	// --- 設定 ---
-	const menuRadius = 180; // メニューの配置半径
+	const menuRadius = 180; // さらにお尻に近づける (180 -> 150)
 
 	// --- コンテンツデータ ---
 	const contents = {
@@ -67,19 +76,38 @@ const menuItems = [
 		contact: { title: "Contact", text: "お仕事のご依頼はこちらから！<br>お散歩のお誘いも待ってます。" }
 	};
 
-	// --- 初期配置 (メニューを円形に並べる) ---
+	// --- 初期配置 (馬蹄形に並べる) ---
 	const menuItems = document.querySelectorAll('.menu-item');
-	const totalItems = menuItems.length;
 	
+	// About (左上寄りの横), Works (右上寄りの横), Skills (左下), Contact (右下)
+	// 上（-90/270度）は空ける
+	const angles = [200, -20, 140, 40]; 
+
 	menuItems.forEach((item, index) => {
-		const angle = (index / totalItems) * Math.PI * 2 - (Math.PI / 2); 
-		const x = Math.cos(angle) * menuRadius;
-		const y = Math.sin(angle) * menuRadius;
+		const angleDeg = angles[index];
+		const angleRad = (angleDeg * Math.PI) / 180;
+		const x = Math.cos(angleRad) * menuRadius;
+		const y = Math.sin(angleRad) * menuRadius;
 		
-		gsap.set(item, { x: x, y: y });
+		// 回転を 0-360 の範囲で正規化して、文字が逆さま(90~270度)なら反転させる
+		let rotation = (angleDeg + 90) % 360;
+		if (rotation < 0) rotation += 360;
+		
+		if (rotation > 90 && rotation < 270) {
+			rotation -= 180;
+		}
+		
+		gsap.set(item, { 
+			x: x, 
+			y: y, 
+			rotation: rotation,
+			scale: 1 
+		});
+		
+		item.dataset.baseRotation = rotation;
 	});
 
-	// --- PixiJSコンポーネントからのイベント監視 ---
+	// --- イベント監視 ---
 	let currentHitItem = null;
 
 	window.addEventListener('corgi-drag', (e) => {
@@ -91,24 +119,33 @@ const menuItems = [
 		if (currentHitItem) {
 			const targetKey = currentHitItem.getAttribute('data-target');
 			updateContent(targetKey);
-			gsap.fromTo(currentHitItem, {scale: 1.3}, {scale: 1, duration: 0.3, ease: "back.out"});
+			// 決定時のプルンとしたアニメーション
+			gsap.fromTo(currentHitItem, { scale: 1.4 }, { scale: 1.15, duration: 0.4, ease: "back.out" });
 		}
 	});
 
 	function checkCollision(x, y) {
-		currentHitItem = null;
+		let foundHit = false;
 		menuItems.forEach(item => {
 			const rect = item.getBoundingClientRect();
-			// 点(x, y)が矩形内にあるか判定（少し余裕を持たせる）
-			const padding = 10;
+			const padding = 20; 
 			if (x >= rect.left - padding && x <= rect.right + padding &&
 				y >= rect.top - padding && y <= rect.bottom + padding) {
-				item.classList.add("active");
+				
+				if (!item.classList.contains("active")) {
+					item.classList.add("active");
+					gsap.to(item, { scale: 1.15, duration: 0.3, ease: "power2.out" });
+				}
 				currentHitItem = item;
+				foundHit = true;
 			} else {
-				item.classList.remove("active");
+				if (item.classList.contains("active")) {
+					item.classList.remove("active");
+					gsap.to(item, { scale: 1, duration: 0.3, ease: "power2.out" });
+				}
 			}
 		});
+		if (!foundHit) currentHitItem = null;
 	}
 
 	function updateContent(key) {
