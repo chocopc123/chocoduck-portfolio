@@ -1,0 +1,203 @@
+---
+---
+<div id="pixi-corgi-wrapper">
+    <div id="pixi-corgi-container"></div>
+    <div id="drag-overlay"></div>
+</div>
+
+<style>
+    #pixi-corgi-wrapper {
+        position: relative;
+        width: 300px;
+        height: 300px;
+        margin: 0 auto;
+    }
+    #pixi-corgi-container {
+        width: 100%;
+        height: 100%;
+    }
+    #drag-overlay {
+        position: absolute;
+        /* お尻の位置に合わせてさらに微調整 */
+        top: 115px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 260px; 
+        height: 220px;
+        background-color: transparent;
+        cursor: grab;
+        touch-action: none;
+        z-index: 100;
+        border-radius: 50%;
+    }
+    #drag-overlay:active {
+        cursor: grabbing;
+    }
+    canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+</style>
+
+<script>
+    import * as PIXI from 'pixi.js';
+    import corgiImg from '../../assets/corgi.png';
+    import corgiButtImg from '../../assets/corgi-butt.png';
+
+    async function init() {
+        const container = document.getElementById('pixi-corgi-container');
+        const overlay = document.getElementById('drag-overlay');
+        
+        if (!container || !overlay) return;
+
+        const app = new PIXI.Application();
+        await app.init({
+            width: 300,
+            height: 300,
+            backgroundAlpha: 0,
+            antialias: true,
+            resolution: window.devicePixelRatio || 1,
+            autoDensity: true,
+        });
+
+        container.appendChild(app.canvas);
+
+        const getSrc = (img: any) => typeof img === 'string' ? img : img.src;
+        const [texBody, texButt] = await Promise.all([
+            PIXI.Assets.load(getSrc(corgiImg)),
+            PIXI.Assets.load(getSrc(corgiButtImg))
+        ]);
+
+        const centerX = 150;
+        const centerY = 150;
+        const buttInitialY = centerY + 30; // ユーザー調整済みの初期位置
+        const scale = 1.0; 
+
+        // 画像の余白が多いため、anchorとpivotを中心(0.5)に設定して重ねます
+        
+        // 体
+        const body = new PIXI.Sprite(texBody);
+        body.anchor.set(0.5);
+        body.x = centerX;
+        body.y = centerY; // 体はそのまま
+        body.scale.set(scale);
+        app.stage.addChild(body);
+
+        // お尻
+        const verticesX = 20;
+        const verticesY = 20;
+        const mesh = new PIXI.Mesh({
+            geometry: new PIXI.PlaneGeometry({
+                width: texButt.width,
+                height: texButt.height,
+                verticesX,
+                verticesY
+            }),
+            texture: texButt,
+        });
+        
+        // メッシュも中心を基準にして配置。
+        mesh.pivot.set(texButt.width / 2, texButt.height / 2);
+        mesh.x = centerX;
+        mesh.y = buttInitialY; 
+        mesh.scale.set(scale);
+        app.stage.addChild(mesh);
+
+        const posAttr = mesh.geometry.getAttribute('aPosition');
+        const originalPositions = new Float32Array(posAttr.buffer.data);
+
+        let dragging = false;
+        let startPos = { x: 0, y: 0 };
+
+        overlay.addEventListener('pointerdown', (e) => {
+            dragging = true;
+            startPos = { x: e.clientX, y: e.clientY };
+            overlay.setPointerCapture(e.pointerId);
+        });
+
+        overlay.addEventListener('pointermove', (e) => {
+            if (!dragging) return;
+            const dx = e.clientX - startPos.x;
+            const dy = e.clientY - startPos.y;
+            const dragDist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dragDist < 2) return;
+
+            const data = posAttr.buffer.data as Float32Array;
+            const w = texButt.width;
+            const h = texButt.height;
+            
+            // ドラッグの向き（正規化ベクトル）
+            const ux = dx / dragDist;
+            const uy = dy / dragDist;
+
+            // ポイント：ドラッグしている方向にある「外縁のターゲット地点」
+            // PlaneGeometryの頂点座標系 (0 〜 w, 0 〜 h) に合わせる
+            const edgeTargetX = (w / 2) + (w / 2) * ux;
+            const edgeTargetY = (h / 2) + (h / 2) * uy;
+
+            for (let i = 0; i < data.length; i += 2) {
+                const ox = originalPositions[i];
+                const oy = originalPositions[i + 1];
+                
+                // ターゲット地点（外端）からの距離を正しく計算
+                const distToEdge = Math.sqrt(Math.pow(ox - edgeTargetX, 2) + Math.pow(oy - edgeTargetY, 2));
+                
+                // 少し柔らかい減衰 (画像の25%程度に影響を広げる)
+                const sigma = w * 0.25;
+                const weight = Math.exp(-(distToEdge * distToEdge) / (2 * sigma * sigma));
+                
+                // 指数を下げてシャープさを落とす (3 -> 1.5)
+                const softWeight = Math.pow(weight, 1.5);
+                
+                // 伸びを抑えるために 0.6倍 の係数を追加
+                data[i] = ox + (dx / scale) * softWeight * 0.6;
+                data[i + 1] = oy + (dy / scale) * softWeight * 0.6;
+            }
+            posAttr.buffer.update();
+
+            window.dispatchEvent(new CustomEvent('corgi-drag', {
+                detail: { x: e.clientX, y: e.clientY, dx, dy }
+            }));
+        });
+
+        const onUp = () => {
+            if (!dragging) return;
+            dragging = false;
+            
+            const snap = () => {
+                if (dragging) return;
+                const data = posAttr.buffer.data as Float32Array;
+                let finished = true;
+                
+                // メッシュの位置を初期位置（centerY + 30）に復元
+                mesh.x += (centerX - mesh.x) * 0.2;
+                mesh.y += (buttInitialY - mesh.y) * 0.2;
+
+                for (let i = 0; i < data.length; i++) {
+                    const diff = originalPositions[i] - data[i];
+                    if (Math.abs(diff) > 0.5) {
+                        data[i] += diff * 0.25; 
+                        finished = false;
+                    } else {
+                        data[i] = originalPositions[i];
+                    }
+                }
+                posAttr.buffer.update();
+                if (!finished) requestAnimationFrame(snap);
+            };
+            requestAnimationFrame(snap);
+            window.dispatchEvent(new CustomEvent('corgi-drop'));
+        };
+
+        overlay.addEventListener('pointerup', onUp);
+        overlay.addEventListener('pointercancel', onUp);
+    }
+
+    if (document.readyState === 'complete') {
+        init();
+    } else {
+        window.addEventListener('load', init);
+    }
+</script>

@@ -31,5 +31,7 @@ const { title = "Welcome!", text = "お尻をひっぱってメニューを選�
 	p {
 		font-size: 1.2rem;
 		line-height: 1.6;
+		/* 2行分の高さを常に確保してレイアウトシフトを防ぐ */
+		min-height: 3.2em; /* 1.6 * 2 = 3.2 */
 	}
 </style>
