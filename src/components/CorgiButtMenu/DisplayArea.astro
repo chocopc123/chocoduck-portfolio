@@ -9,29 +9,54 @@ const { title = "Welcome!", text = "お尻をひっぱってメニューを選�
 
 <div id="content-area">
 	<h1 id="display-title">{title}</h1>
-	<p id="display-text" set:html={text}></p>
+	<div class="text-pill">
+		<p id="display-text" set:html={text}></p>
+	</div>
 </div>
 
 <style>
 	#content-area {
 		position: relative;
-		margin-top: 50px;
+		margin-top: 40px;
 		text-align: center;
-		min-height: 150px;
-		pointer-events: none; /* ドラッグの邪魔にならないように */
+		min-height: 160px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		pointer-events: none;
 		z-index: 10;
 	}
 
 	h1 {
-		color: #E8995E;
-		font-size: 2rem;
-		margin-bottom: 10px;
+		color: #f19d5dff; /* コーギーカラーのオレンジ */
+		font-size: 2.8rem;
+		font-weight: 900;
+		margin-bottom: 15px;
+		letter-spacing: 0.05em;
+	}
+
+	.text-pill {
+		background-color: #f19d5dff;
+		padding: 12px 20px;
+		border-radius: 40px;
+		width: 420px; /* 固定幅を設定 */
+		max-width: 95%; /* スマホなど狭い画面への配慮 */
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		box-shadow: 0 4px 15px rgb(233, 147, 81, 1);
 	}
 
 	p {
-		font-size: 1.2rem;
-		line-height: 1.6;
-		/* 2行分の高さを常に確保してレイアウトシフトを防ぐ */
-		min-height: 3.2em; /* 1.6 * 2 = 3.2 */
+		color: white;
+		font-size: 1.1rem;
+		font-weight: 600;
+		line-height: 1.5;
+		margin: 0;
+		/* 2行分のスペースを確保 */
+		min-height: 3em; 
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 </style>
