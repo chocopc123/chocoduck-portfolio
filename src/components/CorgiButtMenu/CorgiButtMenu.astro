@@ -1,0 +1,19 @@
+---
+import DisplayArea from './DisplayArea.astro';
+import InteractionMenu from './InteractionMenu.astro';
+---
+
+<div class="menu-container">
+    <DisplayArea />
+    <InteractionMenu />
+</div>
+
+<style>
+    .menu-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        height: 100svh; /* viewport height */
+    }
+</style>

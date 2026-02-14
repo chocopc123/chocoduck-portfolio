@@ -1,0 +1,90 @@
+---
+---
+<div id="corgi-butt">
+	<div class="butt-shape">
+		<div class="leg left"><div class="paw"></div></div>
+		<div class="leg right"><div class="paw"></div></div>
+		<div class="butt-left"></div>
+		<div class="butt-right"></div>
+		<div class="butt-white"></div>
+	</div>
+</div>
+
+<style>
+	#corgi-butt {
+		position: absolute;
+		width: 160px;
+		height: 140px;
+		cursor: grab;
+		z-index: 100;
+	}
+
+	#corgi-butt:active {
+		cursor: grabbing;
+	}
+
+	/* お尻の形（ハート型を応用） */
+	.butt-shape {
+		position: relative;
+		width: 100%;
+		height: 100%;
+	}
+	
+	.butt-left, .butt-right {
+		position: absolute;
+		width: 90px;
+		height: 120px;
+		background-color: #E8995E; /* コーギーカラー */
+		border-radius: 50px 50px 60px 60px;
+		top: 0;
+		box-shadow: inset -5px -5px 10px rgba(0,0,0,0.1);
+	}
+
+	.butt-left {
+		left: 0;
+		transform: rotate(-10deg);
+	}
+
+	.butt-right {
+		right: 0;
+		transform: rotate(10deg);
+	}
+
+	/* 白い毛の部分 */
+	.butt-white {
+		position: absolute;
+		bottom: 20px;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 60px;
+		height: 50px;
+		background-color: #FFF;
+		border-radius: 50%;
+		filter: blur(5px);
+	}
+
+	/* 足（ちょこんとした足） */
+	.leg {
+		position: absolute;
+		bottom: -10px;
+		width: 30px;
+		height: 40px;
+		background-color: white;
+		border-radius: 15px;
+		z-index: -1;
+	}
+	.leg.left { left: 20px; transform: rotate(15deg); }
+	.leg.right { right: 20px; transform: rotate(-15deg); }
+
+	/* 肉球 */
+	.paw {
+		position: absolute;
+		bottom: 5px;
+		width: 10px;
+		height: 8px;
+		background-color: #FFB7C5;
+		border-radius: 50%;
+		left: 50%;
+		transform: translateX(-50%);
+	}
+</style>

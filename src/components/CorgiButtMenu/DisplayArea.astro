@@ -1,0 +1,35 @@
+---
+interface Props {
+	title?: string;
+	text?: string;
+}
+
+const { title = "Welcome!", text = "お尻をひっぱってメニューを選んでね🐾" } = Astro.props;
+---
+
+<div id="content-area">
+	<h1 id="display-title">{title}</h1>
+	<p id="display-text" set:html={text}></p>
+</div>
+
+<style>
+	#content-area {
+		position: relative;
+		margin-top: 50px;
+		text-align: center;
+		min-height: 150px;
+		pointer-events: none; /* ドラッグの邪魔にならないように */
+		z-index: 10;
+	}
+
+	h1 {
+		color: #E8995E;
+		font-size: 2rem;
+		margin-bottom: 10px;
+	}
+
+	p {
+		font-size: 1.2rem;
+		line-height: 1.6;
+	}
+</style>
