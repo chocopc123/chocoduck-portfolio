@@ -60,6 +60,24 @@ const menuItems = [
 		/* scale属性を削除。JS側のGSAPでのみ制御する */
 		box-shadow: 0 0 25px rgba(255, 183, 197, 0.7);
 	}
+
+	.particle {
+		position: fixed;
+		top: 0;
+		left: 0;
+		pointer-events: none;
+		z-index: 9999;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		will-change: transform, opacity;
+	}
+	.particle svg {
+		display: block;
+		width: 100%;
+		height: 100%;
+		filter: drop-shadow(0 2px 4px rgba(255, 183, 197, 0.4));
+	}
 </style>
 
 <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -121,8 +139,104 @@ const menuItems = [
 			updateContent(targetKey);
 			// 決定時のプルンとしたアニメーション
 			gsap.fromTo(currentHitItem, { scale: 1.4 }, { scale: 1.15, duration: 0.4, ease: "back.out" });
+			
+			// パステルパーティクルを発生させる
+			createParticles(currentHitItem);
 		}
 	});
+
+	// --- パーティクル生成演出 ---
+	const particleSVGs = [
+		// 肉球 (Paw)
+		`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c-1.66 0-3 1.34-3 3 0 2 2 3.5 3 3.5s3-1.5 3-3.5c0-1.66-1.34-3-3-3zm-4.5-3c-1.1 0-2 .9-2 2 0 1.5 1.5 2 2 2s2-.5 2-2c0-1.1-.9-2-2-2zm9 0c-1.1 0-2 .9-2 2 0 1.5 1.5 2 2 2s2-.5 2-2c0-1.1-.9-2-2-2zm-6.5-4c-.83 0-1.5.67-1.5 1.5S9.17 10 10 10s1.5-.67 1.5-1.5S10.83 7 10 7zm4 0c-.83 0-1.5.67-1.5 1.5S13.17 10 14 10s1.5-.67 1.5-1.5S14.83 7 14 7z"/></svg>`,
+		// しゃぼん玉 (Bubble)
+		`<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="9" r="2" fill="currentColor"/></svg>`,
+		// お星様 (Rounded Star)
+		`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.24c.72 1.48 2.05 3.32 3.44 4.7 1.39 1.39 3.22 2.72 4.7 3.44-1.48.72-3.32 2.05-4.7 3.44-1.39 1.39-2.72 3.22-3.44 4.7-.72-1.48-2.05-3.32-3.44-4.7-1.39-1.39-3.22-2.72-4.7-3.44 1.48-.72 3.32-2.05 4.7-3.44 1.39-1.39 2.72-3.22 3.44-4.7z"/></svg>`
+	];
+
+	const pastelColors = [
+		'#FFB7C5', // パステルピンク
+		'#FFDAC1', // パステルピーチ
+		'#FFF5C3', // パステルイエロー
+		'#E8FFF5', // パステルミント
+		'#C7CEEA'  // パステルブルー
+	];
+
+	function createParticles(targetElement) {
+		const targetRect = targetElement.getBoundingClientRect();
+
+		// 画面上の絶対位置を計算 (スクロールやコンテナに依存しない)
+		const startX = targetRect.left + targetRect.width / 2;
+		const startY = targetRect.top + targetRect.height / 2;
+
+		const count = 12 + Math.floor(Math.random() * 6); // 12〜17個
+
+		for (let i = 0; i < count; i++) {
+			const particle = document.createElement('div');
+			particle.className = 'particle';
+
+			// ランダムに形状と色を選択
+			const svgMarkup = particleSVGs[Math.floor(Math.random() * particleSVGs.length)];
+			const color = pastelColors[Math.floor(Math.random() * pastelColors.length)];
+
+			particle.innerHTML = svgMarkup;
+			
+			// サイズをランダムに設定（16px〜28px）
+			const size = 16 + Math.random() * 12;
+			
+			particle.style.width = `${size}px`;
+			particle.style.height = `${size}px`;
+			particle.style.color = color;
+			
+			// 初期位置設定（中心からわずかにズラす）
+			const angle = Math.random() * Math.PI * 2;
+			const initDist = Math.random() * 10;
+			const initX = startX + Math.cos(angle) * initDist - size / 2;
+			const initY = startY + Math.sin(angle) * initDist - size / 2;
+
+			gsap.set(particle, {
+				x: initX,
+				y: initY,
+				scale: 0.1,
+				rotation: Math.random() * 360,
+				opacity: 0
+			});
+
+			document.body.appendChild(particle);
+
+			// 飛び散る距離（50px〜110px）
+			const distance = 50 + Math.random() * 60;
+			const tx = Math.cos(angle) * distance;
+			const ty = Math.sin(angle) * distance;
+
+			// アニメーション：ふわっと広がって、少し落ちる
+			// 1. 広がって大きくなるフェーズ
+			gsap.to(particle, {
+				x: `+=${tx}`,
+				y: `+=${ty}`,
+				rotation: (Math.random() - 0.5) * 180,
+				scale: 1,
+				opacity: 0.9,
+				duration: 0.5 + Math.random() * 0.3,
+				ease: "power2.out",
+				onComplete: () => {
+					// 2. ふわっと落下しながら消えるフェーズ
+					gsap.to(particle, {
+						y: `+=25`,
+						opacity: 0,
+						scale: 0.4,
+						rotation: `+=30`,
+						duration: 0.6 + Math.random() * 0.3,
+						ease: "power1.in",
+						onComplete: () => {
+							particle.remove();
+						}
+					});
+				}
+			});
+		}
+	}
 
 	function checkCollision(x, y) {
 		let foundHit = false;
